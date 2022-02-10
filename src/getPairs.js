@@ -46,7 +46,7 @@ const getPairs = async () => {
 
   logger.info('Gettings pairs');
 
-  let pairsLength = 4; // await pancake.factory.methods.allPairsLength().call();
+  let pairsLength = 10; // await pancake.factory.methods.allPairsLength().call();
 
   const pairs = [];
 

@@ -33,8 +33,8 @@ const start = async () => {
 
   const data = await getRoute();
 
-  console.log('Route:', data.route);
-  console.log(`Profit: ${data.profit}`);
+  // console.log('Route:', data.route);
+  // console.log(`Profit: ${data.profit}`);
 
   if (data.profit > 0) {
     logger.info('EXECUTE TRADE');

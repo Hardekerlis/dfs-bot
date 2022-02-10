@@ -1,62 +1,70 @@
 const BN = require('bn.js');
 
-const getPriceFromRoute = async(route, tradeAmt, dexex, addresses, cb) => {
-  const routePath = route.slice()
+const DEFAULT_GAS = '25000';
 
-  const fetchQuote = async(dex, path, amt) => {
+const getPriceFromRoute = async (
+  route,
+  tradeAmt,
+  dexex,
+  gasPrice,
+  addresses,
+  cb,
+) => {
+  const routePath = route.slice();
+
+  const fetchQuote = async (dex, path, amt) => {
     try {
       let quote = new BN(
         (await dex.methods.getAmountsOut(amt.toString(), path).call())[1],
       );
+
+      let gas = new BN(DEFAULT_GAS).mul(gasPrice);
+      quote = quote.sub(gas);
+
       return quote;
     } catch (err) {
-      return new BN("-1")
+      return new BN('-1');
     }
-  }
+  };
 
-  const fetchQuotes = async(_path, _amt) => {
+  const fetchQuotes = async (_path, _amt) => {
     //fetchQuote() on all dexex
 
-    let arrToReturn = [new BN("-1"), -1];
+    let arrToReturn = [new BN('-1'), -1];
 
     await new Promise((resolve, reject) => {
-
-      let info = {}
+      let info = {};
 
       let quotesGot = 0;
-      const doFetch = async(dexIndex) => {
-        let quote = await fetchQuote(
-          dexex[dexIndex],
-          _path,
-          _amt
-        )
+      const doFetch = async (dexIndex) => {
+        let quote = await fetchQuote(dexex[dexIndex], _path, _amt);
         info[dexIndex] = {
           quote,
-          dexIndex
-        }
+          dexIndex,
+        };
         // console.log(_path)
         // console.log("got quote: " + quote + " from: " + dexIndex)
         quotesGot++;
-        if(dexex.length === quotesGot) {
-          for(let dIndex in info) {
-            if(info[dIndex].quote.gt(arrToReturn[0])) {
-              arrToReturn = [info[dIndex].quote, info[dIndex].dexIndex]
+        if (dexex.length === quotesGot) {
+          for (let dIndex in info) {
+            if (info[dIndex].quote.gt(arrToReturn[0])) {
+              arrToReturn = [info[dIndex].quote, info[dIndex].dexIndex];
             }
           }
           // console.log(arrToReturn[0].toString(), arrToReturn[1])
-          resolve()
+          resolve();
         }
-      }
+      };
 
       let dexIndex = 0;
-      for(let dex of dexex) {
-        doFetch(dexIndex)
+      for (let dex of dexex) {
+        doFetch(dexIndex);
         dexIndex++;
       }
-    })
+    });
 
     return arrToReturn;
-  }
+  };
 
   let dexRoute = [];
   let dexRouteData = [];
@@ -68,18 +76,15 @@ const getPriceFromRoute = async(route, tradeAmt, dexex, addresses, cb) => {
   let amtToTrade = tradeAmt;
 
   let routePathIndex = 0;
-  for(let token of routePath) {
-    if(error) return;
-    if(routePathIndex + 1 === routePath.length) break;
+  for (let token of routePath) {
+    if (error) return;
+    if (routePathIndex + 1 === routePath.length) break;
 
-    let tokenPath = [token, routePath[routePathIndex + 1]]
+    let tokenPath = [token, routePath[routePathIndex + 1]];
 
-    let [quote, dexIndex] = await fetchQuotes(
-      tokenPath,
-      amtToTrade,
-    )
+    let [quote, dexIndex] = await fetchQuotes(tokenPath, amtToTrade);
 
-    if(quote.eq(new BN("-1"))) {
+    if (quote.eq(new BN('-1'))) {
       error = true;
       break;
     }
@@ -89,17 +94,17 @@ const getPriceFromRoute = async(route, tradeAmt, dexex, addresses, cb) => {
       dexIndex,
       tokenPath,
       quoteOut: quote,
-      quoteIn: amtToTrade
-    })
+      quoteIn: amtToTrade,
+    });
 
     amtToTrade = quote;
     routePathIndex++;
   }
 
-  if(error) {
+  if (error) {
     return cb({
-      error: true
-    })
+      error: true,
+    });
   }
 
   const profit = amtToTrade.sub(tradeAmt);
@@ -110,27 +115,41 @@ const getPriceFromRoute = async(route, tradeAmt, dexex, addresses, cb) => {
     profit,
     profitable: !profit.isNeg(),
     dexRoute,
-    dexRouteData
-  })
-}
+    dexRouteData,
+    error: false,
+  });
+};
 
+const sleep = async (ms) => {
+  await new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, ms);
+  });
+};
 
+const wrapper = async (route, tradeAmt, dexex, gasPrice, addresses) => {
+  let result;
+  for (let i = 0; i < 10; i++) {
+    result = await new Promise(async (resolve) => {
+      getPriceFromRoute(
+        route,
+        tradeAmt,
+        dexex,
+        gasPrice,
+        addresses,
+        (tempResult) => {
+          resolve(tempResult);
+        },
+      );
+    });
 
+    if (!result.error) break;
 
+    await sleep(2000);
+  }
 
+  return result;
+};
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-module.exports = getPriceFromRoute;
+module.exports = wrapper;
