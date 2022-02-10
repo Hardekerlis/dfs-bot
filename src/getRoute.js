@@ -27,185 +27,7 @@ const sushi = {
 
 const ibep20Abi = require('../abis/IBEP20.json');
 
-let calls = 0;
-
-const getPriceFromRoute = async (route, tradeAmt, dexex, addresses, cb) => {
-  console.log(route, 'myROute');
-  if (calls !== 0) return;
-  calls++;
-
-  const doTest = async (dex, path, amt, cb) => {
-    // await dex.setPair(path[0], path[1])
-    // await dex.getReserves();
-    // let quote = await this.#getPriceFromToken(
-    //   dex,
-    //   path,
-    //   amt
-    // )
-
-    console.log('from:', addresses[path[0]]);
-    console.log('to:', addresses[path[1]]);
-
-    try {
-      let quote = new BN(
-        (await dex.methods.getAmountsOut(amt.toString(), path).call())[1],
-      );
-
-      cb(quote);
-    } catch (err) {
-      console.log(
-        await pancake.factory.methods.getPair(path[0], path[1]).call(),
-      );
-
-      console.log('from:', addresses[path[0]]);
-      console.log('to:', addresses[path[1]]);
-      cb(new BN('-1'));
-      console.log(err, 50);
-      // logger.error(err);
-    }
-
-    // console.log("trade:", amt.toString())
-    // console.log("quote:", quote.toString())
-  };
-
-  let priceRoute = [];
-  let priceRouteData = [];
-  let stop = false;
-
-  console.log(route.length, 10);
-  console.log(dexex.length, 10);
-
-  await new Promise(async (resolve, reject) => {
-    let toGet = route.length - 1;
-    let got = 0;
-
-    const gotQuoteData = (data) => {
-      //got all quote data for a pair
-
-      if (data.error) {
-        stop = true;
-        resolve();
-        return;
-      }
-
-      priceRoute.push(data.index);
-      priceRouteData.push(data);
-
-      got++;
-      if (toGet === got) {
-        resolve();
-      }
-    };
-
-    let routeIndex = 0;
-    for (let token of route) {
-      if (routeIndex + 1 === route.length) break;
-      if (stop) break;
-
-      // console.log("from:", token)
-      // console.log("to:", route[routeIndex+1])
-
-      await new Promise(async (_resolve, _reject) => {
-        let data = {};
-        let toGet = dexex.length;
-        let got = 0;
-        const gotTest = (dexName, dexIndex, quote) => {
-          if (quote.eq(new BN('-1'))) {
-            gotQuoteData({
-              error: true,
-            });
-            _resolve();
-            return;
-          }
-
-          data[dexIndex] = {
-            dexName,
-            dexIndex,
-            quote,
-          };
-          got++;
-          if (toGet === got) {
-            let maxQuote = new BN('0');
-            let maxQuoteIndex = -1;
-            for (let key in data) {
-              if (data[key].quote.gt(maxQuote)) {
-                maxQuoteIndex = data[key].dexIndex;
-                maxQuote = data[key].quote;
-              }
-            }
-
-            gotQuoteData({
-              quote: maxQuote,
-              index: maxQuoteIndex,
-            });
-            _resolve();
-          }
-        };
-
-        let dexIndex = 0;
-        for (let dex of dexex) {
-          let dIndex = dexIndex;
-          if (stop) break;
-
-          let amt;
-          if (priceRouteData.length === 0) {
-            amt = tradeAmt;
-          } else {
-            amt = priceRouteData[priceRouteData.length - 1].quote;
-          }
-
-          console.log('calling doTest', [token, route[routeIndex + 1]]);
-
-          doTest(
-            dex,
-            [token, route[routeIndex + 1]],
-            // latestQuote,
-            amt,
-            (quote) => gotTest('dex.name', dIndex, quote),
-          );
-          dexIndex++;
-          if (stop) break;
-        }
-      });
-      routeIndex++;
-    }
-  });
-
-  if (stop === true) {
-    return {
-      error: true,
-    };
-  }
-
-  // return {
-  //   profitable: !tradeAmt
-  //     .sub(priceRouteData[priceRouteData.length - 1].quote)
-  //     .isNeg(),
-  //   dexRoute: priceRoute,
-  //   dexRouteData: priceRouteData,
-  //   quoteIn: tradeAmt,
-  //   quoteOut: priceRouteData[priceRouteData.length - 1].quote,
-  // };
-
-  let hej = new BN('0');
-
-  console.log(hej.add(new BN('1')).toString());
-  console.log(hej.toString());
-
-  console.log(
-    tradeAmt.sub(priceRouteData[priceRouteData.length - 1].quote).toString(),
-  );
-
-  cb({
-    profitable: !tradeAmt
-      .sub(priceRouteData[priceRouteData.length - 1].quote)
-      .isNeg(),
-    dexRoute: priceRoute,
-    dexRouteData: priceRouteData,
-    quoteIn: tradeAmt,
-    quoteOut: priceRouteData[priceRouteData.length - 1].quote,
-  });
-};
+const getPriceFromRoute = require('./getPriceFromRoute.js')
 
 const getData = async () => {
   const routes = JSON.parse(await client.get('routes'));
@@ -301,16 +123,19 @@ const getRoute = async () => {
     for (const destination of destinations) {
       if (destination === outToken || maxHops === 0) {
         visited.push(destination);
+        console.log("pushing destination", visited.length)
         // console.log('Getting price for path', visited);
 
         if (visited.length > 3) return;
         console.log('Getting prices ; )');
+        console.log(visited)
         getPriceFromRoute(
           visited,
           new BN(web3.utils.toWei('1')),
-          [pancake.router],
+          [pancake.router, sushi.router],
           addresses,
           (result) => {
+            // console.log("getPriceFromRoute callback")
             console.log(result.quoteIn.toString());
             console.log(result.quoteOut.toString());
             console.log(result.profitable, 281);
