@@ -83,7 +83,6 @@ const dfs = (start, visited = new Set()) => {
   for (const destination of destinations) {
     if (destination === 'BKK') {
       console.log('DFS found Bangkok in steps');
-      stop = true;
       return;
     }
 

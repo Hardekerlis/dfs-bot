@@ -96,7 +96,7 @@ const logger = new Logger({
   },
   disableLogs: false,
   disableSpecific: {
-    enabled: process.env.LOCAL_DEV === 'false',
+    enabled: false, // process.env.LOCAL_DEV === 'false',
     toDisable: ['debug'],
   },
 });
