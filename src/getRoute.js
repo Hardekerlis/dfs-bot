@@ -27,7 +27,9 @@ const sushi = {
 
 const ibep20Abi = require('../abis/IBEP20.json');
 
-const getPriceFromRoute = require('./getPriceFromRoute.js');
+// const { getPriceFromRoute, setForcedDex } = require('./getPriceFromRoute.js');
+const PriceRoute = require('./getPriceFromRoute.js');
+
 
 const getData = async () => {
   const routes = JSON.parse(await client.get('routes'));
@@ -244,6 +246,10 @@ const validateRoute = async (route, cb) => {
 
   let precision = 18;
   const doNum = (num) => {
+    if(precision <= 0) {
+      amt = -1;
+      return;
+    }
     parseFloat(num).toPrecision(precision);
     let n;
     try {
@@ -254,15 +260,30 @@ const validateRoute = async (route, cb) => {
     }
   };
   let amt = doNum(optimalAmtRes.optimalAmt.toString());
+  logger.debug(`AMT: ${amt}`)
+  if(amt === -1 || !amt) {
+    logger.error("amt from getOptimalInput() was fucked. returning...")
+    logger.error("amt:", amt)
+    return {
+      error: true
+    };
+  }
 
   const gasPrice = await web3.eth.getGasPrice();
-  const result = await getPriceFromRoute(
-    route,
-    amt,
-    [pancake.router],
-    new BN(gasPrice),
-    [],
-  );
+
+  const newRoute = new PriceRoute(route, amt, [pancake.router, sushi.router], new BN(gasPrice))
+  newRoute.forceDex(0)
+  const result = await newRoute.tryGetPrice(10);
+
+
+
+  // const result = await getPriceFromRoute(
+  //   route,
+  //   amt,
+  //   [pancake.router],
+  //   new BN(gasPrice),
+  //   [],
+  // );
 
   return result;
 };
@@ -372,6 +393,8 @@ const getRoute = async () => {
       // }
     }
   };
+
+  console.log("running DFS")
 
   await dfs(WBNB, WBNB, async (visited) => {
     let temp = [];
