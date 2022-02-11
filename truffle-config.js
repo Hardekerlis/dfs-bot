@@ -11,7 +11,9 @@ const testAcc = {
 testAcc.privateKey = wallets.private_keys[testAcc.walletAddress];
 
 const HDWalletProvider = require('@truffle/hdwallet-provider');
-const privateKeys = [`${process.env.PRIVATE_KEY}`];
+// const privateKeys = [`${process.env.PRIVATE_KEY}`];
+const privateKeys = [`${testAcc.privateKey}`];
+
 /**
  * Use this file to configure your truffle project. It's seeded with some
  * common settings for different networks and features like migrations,
@@ -111,7 +113,7 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.8.10",    // Fetch exact version from solc-bin (default: truffle's version)
+      version: '0.6.6', // Fetch exact version from solc-bin (default: truffle's version)
       // docker: true,        // Use "0.5.1" you've installed locally with docker (default: false)
       // settings: {          // See the solidity docs for advice about optimization and evmVersion
       //  optimizer: {
@@ -128,7 +130,7 @@ module.exports = {
         },
         // evmVersion: "byzantium"
       },
-    }
+    },
   },
 
   // Truffle DB is currently disabled by default; to enable it, change enabled:
@@ -142,13 +144,13 @@ module.exports = {
   // $ truffle migrate --reset --compile-all
   //
   // db: {
-    // enabled: false,
-    // host: "127.0.0.1",
-    // adapter: {
-    //   name: "sqlite",
-    //   settings: {
-    //     directory: ".db"
-    //   }
-    // }
+  // enabled: false,
+  // host: "127.0.0.1",
+  // adapter: {
+  //   name: "sqlite",
+  //   settings: {
+  //     directory: ".db"
+  //   }
+  // }
   // }
 };
