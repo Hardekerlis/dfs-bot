@@ -30,7 +30,6 @@ const ibep20Abi = require('../abis/IBEP20.json');
 // const { getPriceFromRoute, setForcedDex } = require('./getPriceFromRoute.js');
 const PriceRoute = require('./getPriceFromRoute.js');
 
-
 const getData = async () => {
   const routes = JSON.parse(await client.get('routes'));
 
@@ -171,8 +170,6 @@ const getOptimalInput = async (path, cb) => {
     }
   });
 
-  console.log(pairs);
-
   if (encounteredError) return { error: true };
 
   let Ea, Eb;
@@ -235,7 +232,8 @@ const getOptimalInput = async (path, cb) => {
     idx++;
   }
 
-  return { error: false, optimalAmt: getOptimalAmount(Ea, Eb) };
+  // getOptimalAmount(Ea, Eb)
+  return { error: false, optimalAmt: 1 };
 };
 
 let ran = false;
@@ -246,36 +244,43 @@ const validateRoute = async (route, cb) => {
 
   let precision = 18;
   const doNum = (num) => {
-    if(precision <= 0) {
-      amt = -1;
+    if (precision <= 0) {
       return;
     }
-    parseFloat(num).toPrecision(precision);
+    num = parseFloat(num).toPrecision(precision);
     let n;
     try {
       n = new BN(web3.utils.toWei(num + ''));
+
+      return n;
     } catch (err) {
       precision--;
       doNum(num);
     }
   };
+
+  console.log(optimalAmtRes.optimalAmt.toString());
   let amt = doNum(optimalAmtRes.optimalAmt.toString());
-  logger.debug(`AMT: ${amt}`)
-  if(amt === -1 || !amt) {
-    logger.error("amt from getOptimalInput() was fucked. returning...")
-    logger.error("amt:", amt)
+  logger.debug(`AMT: ${amt}`);
+
+  if (amt === -1 || !amt) {
+    logger.error('amt from getOptimalInput() was fucked. returning...');
+    logger.error('amt:', amt);
     return {
-      error: true
+      error: true,
     };
   }
 
   const gasPrice = await web3.eth.getGasPrice();
 
-  const newRoute = new PriceRoute(route, amt, [pancake.router, sushi.router], new BN(gasPrice))
-  newRoute.forceDex(0)
+  const newRoute = new PriceRoute(
+    route,
+    amt,
+    [pancake.router, sushi.router],
+    new BN(gasPrice),
+  );
+  newRoute.forceDex(0);
   const result = await newRoute.tryGetPrice(10);
-
-
 
   // const result = await getPriceFromRoute(
   //   route,
@@ -285,10 +290,36 @@ const validateRoute = async (route, cb) => {
   //   [],
   // );
 
-  return result;
+  cb(result);
 };
 
-const doTrade = async (data) => {};
+const getLoanPath = require('./getLoanPath.js');
+
+const traderAbi = require('../build/contracts/Trader.json');
+
+const traderAddress = traderAbi.networks['56'].address;
+const traderContract = new web3.eth.Contract(traderAbi.abi, traderAddress);
+
+const doTrade = async (result) => {
+  const path = ['0x55d398326f99059ff775485246999027b3197955', ...result.path];
+
+  console.log(path);
+
+  try {
+    await traderContract.methods
+      .swap(
+        path,
+        // [0, ...result.dexRoute],
+        await getLoanPath(path[0], path[1], result.quoteIn.toString()),
+      )
+      .send({
+        from: global.walletAddress,
+      });
+  } catch (err) {
+    logger.error('Contract ran into an error');
+    console.error(err);
+  }
+};
 
 const getRoute = async () => {
   logger.info('Searching..');
@@ -314,8 +345,9 @@ const getRoute = async () => {
     return a;
   }
 
-  const dfs = async (inToken, startToken, cb, maxHops = 5, visited = []) => {
+  const dfs = async (inToken, startToken, cb, maxHops = 6, visited = []) => {
     if (stop) return;
+    if (maxHops <= 0) return;
     visited.push(inToken);
 
     // Shuffle array to add some randomization
@@ -330,8 +362,6 @@ const getRoute = async () => {
     for (const destination of destinations) {
       // visited.push(destination);
       if (visited.length >= 2) {
-        if (maxHops === 0) return;
-
         if (hasStartToken === -1) {
           dfs(destination, startToken, cb, maxHops - 1, visited);
           continue;
@@ -344,14 +374,25 @@ const getRoute = async () => {
           tempVisited.push(startToken);
         }
 
-        console.log('Validating route');
+        const indexOfBSCUSD = tempVisited.indexOf(
+          '0x55d398326f99059fF775485246999027B3197955',
+        );
 
+        if (indexOfBSCUSD !== -1) {
+          if (
+            tempVisited[indexOfBSCUSD - 1] === WBNB ||
+            tempVisited[indexOfBSCUSD + 1] === WBNB
+          ) {
+            continue;
+          }
+        }
+
+        logger.debug('Validating route');
         validateRoute(tempVisited, (result) => {
-          console.log('Hops', 5 - maxHops);
-          console.log(tempVisited);
-          console.log(result, 345);
           if (!result.profitable || result.error)
             dfs(destination, startToken, cb, maxHops - 1, visited);
+
+          doTrade(result);
         });
       } else dfs(destination, startToken, cb, maxHops - 1, visited);
       //
@@ -394,7 +435,38 @@ const getRoute = async () => {
     }
   };
 
-  console.log("running DFS")
+  // console.log(adjecencyList);
+  // return;
+
+  // Depth first search
+  // let results = [];
+  // const dfs = async (start, visited = new Set()) => {
+  //   if (stop) return;
+  //   console.log(addresses[start]);
+  //
+  //   visited.add(start);
+  //
+  //   const destinations = adjecencyList.get(start);
+  //
+  //   for (const destination of destinations) {
+  //     if (destination === WBNB) {
+  //       console.log('DFS found WBNB in steps');
+  //       // stop = true;
+  //       break;
+  //     }
+  //
+  //     if (!visited.has(destination)) {
+  //       dfs(destination, visited);
+  //     }
+  //   }
+  //   results.push(visited);
+  // };
+  //
+  // logger.info('running DFS');
+  //
+  // await dfs(WBNB);
+  //
+  // console.log(results, 478);
 
   await dfs(WBNB, WBNB, async (visited) => {
     let temp = [];

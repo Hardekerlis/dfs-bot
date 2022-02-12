@@ -3,20 +3,19 @@ const BN = require('bn.js');
 const DEFAULT_GAS = '25000';
 
 class Routing {
-
   constructor(route, tradeAmt, dexex, gasPrice) {
-    console.log("new ROUTING")
+    console.log('new ROUTING');
     this.route = route.slice();
     try {
-      if(BN.isBN(tradeAmt)) this.tradeAmt = new BN(tradeAmt)
-      else this.tradeAmt = new BN(tradeAmt.toString())
-    }catch(err) {
-      console.log(tradeAmt, 13)
-      console.log("Invalid tradeAmt")
-      console.log("tradeAmt couldn't be converted to BN (prob)")
+      if (BN.isBN(tradeAmt)) this.tradeAmt = new BN(tradeAmt);
+      else this.tradeAmt = new BN(tradeAmt.toString());
+    } catch (err) {
+      console.log(tradeAmt, 13);
+      console.log('Invalid tradeAmt');
+      console.log("tradeAmt couldn't be converted to BN (prob)");
     }
     this.dexex = dexex.slice();
-    this.gas = new BN("25000") //default gas
+    this.gas = new BN('25000'); //default gas
     this.gasPrice = gasPrice;
     this.forcedDex = -1;
   }
@@ -64,7 +63,7 @@ class Routing {
         }
       };
 
-      if(this.forcedDex !== -1) {
+      if (this.forcedDex !== -1) {
         doFetch(this.forcedDex);
         return;
       }
@@ -131,6 +130,7 @@ class Routing {
       dexRoute,
       dexRouteData,
       error: false,
+      path: this.route,
     });
   }
 
@@ -140,18 +140,17 @@ class Routing {
         resolve();
       }, ms);
     });
-  };
+  }
 
-  async tryGetPrice (times) {
-    if(!times) times = 10;
+  async tryGetPrice(times) {
+    if (!times) times = 10;
     let result;
     for (let i = 0; i < times; i++) {
+      console.log('Trying', i);
       result = await new Promise(async (resolve) => {
-        this.getPrice(
-          (tempResult) => {
-            resolve(tempResult);
-          },
-        );
+        this.getPrice((tempResult) => {
+          resolve(tempResult);
+        });
       });
 
       if (!result.error) break;
@@ -160,8 +159,7 @@ class Routing {
     }
 
     return result;
-  };
-
+  }
 }
 
 module.exports = Routing;

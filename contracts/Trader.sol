@@ -19,7 +19,7 @@ import "./libraries/SafeMath.sol";
 import "./libraries/Ownable.sol";
 import "./libraries/UniswapV2Library.sol";
 import "./libraries/PancakeLibrary.sol";
-contract Trader is IPancakeCallee {
+contract Trader is Ownable, IPancakeCallee {
   using SafeMath for uint;
 
   IPancakeRouter02 public pancakeRouter;
@@ -38,17 +38,17 @@ contract Trader is IPancakeCallee {
     sushiFactory = _sushiFactory;
   }
 
-  function swap(address[] calldata _path, Direction[] calldata _directions, uint _amount0) external  {
+  function swap(address[] calldata _path, uint[] calldata _amount) external  {
 
     address pairAddress = IPancakeFactory(pancakeFactory).getPair(_path[0], _path[1]);
 
     require(pairAddress != address(0), "This pools doesn't exist");
 
     IPancakePair(pairAddress).swap(
-        _amount0,
-        0,
-        address(this),
-        abi.encode(_path, _directions)
+      _amount[0],
+      _amount[1],
+      address(this),
+      abi.encode(_path)
     );
   }
 
@@ -76,44 +76,52 @@ contract Trader is IPancakeCallee {
     uint _amount1,
     bytes calldata _data
   ) external override {
-    (address[] memory path, Direction[] memory directions) = abi.decode(_data, (address[], Direction[]));
+    (address[] memory path) = abi.decode(_data, (address[]));
 
-    for(uint index = 0; index < path.length - 1; index++) {
+    address token0 = IPancakePair(msg.sender).token0();
+    address token1 = IPancakePair(msg.sender).token1();
+
+    require(
+        msg.sender == PancakeLibrary.pairFor(pancakeFactory, token0, token1), "Unauthorized"
+    );
+
+    IBEP20 ogToken = IBEP20(path[path.length - 1]);
+    uint loanAmt = ogToken.balanceOf(address(this));
+
+    for(uint index = 1; index < path.length - 1; index++) {
       IBEP20 token = IBEP20(path[index]);
       uint balanceOf = token.balanceOf(address(this));
 
-      if(directions[index] == Direction.PANCAKE_TO_SUSHI) {
-        token.approve(address(sushiRouter), balanceOf);
+      token.approve(address(pancakeRouter), balanceOf);
 
-        address[] memory currentPath = new address[](2);
-        currentPath[0] = path[index];
-        currentPath[1] = path[index+1];
+      address[] memory currentPath = new address[](2);
+      currentPath[0] = path[index];
+      currentPath[1] = path[index+1];
 
-        uint amountOut = UniswapV2Library.getAmountsOut(
-          sushiFactory,
-          balanceOf,
-          currentPath
-        )[1];
+      uint amountOut = PancakeLibrary.getAmountsOut(
+        pancakeFactory,
+        balanceOf,
+        currentPath
+      )[1];
 
-
-        sushiRouter.swapExactTokensForTokens(
-          balanceOf,
-          amountOut,
-          currentPath,
-          msg.sender,
-          block.timestamp
-        );
-        // require(false, Strings.toString(index));
-
-      }else {
-
-      }
+      pancakeRouter.swapExactTokensForTokens(
+        balanceOf,
+        0,
+        currentPath,
+        address(this),
+        block.timestamp
+      );
     }
 
-    uint balance = address(this).balance;
+    uint profitAmt = ogToken.balanceOf(address(this));
 
-    require(false, Strings.toString(balance));
 
+    require(profitAmt > loanAmt, "No profit");
+
+    ogToken.approve(address(this), loanAmt);
+    ogToken.approve(address(this), loanAmt - profitAmt);
+    ogToken.transfer(msg.sender, loanAmt);
+    ogToken.transfer(owner(), loanAmt - profitAmt);
   }
 }
 
