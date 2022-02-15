@@ -1,0 +1,10 @@
+Script started, output log file is 'typescript'.
+kb mode was ?UNKNOWN?
+[ if you are trying this under X, it might not work
+since the X server is also reading /dev/console ]
+
+press any key (program terminates 10s after last keypress)...
+keycode  29 press
+keycode  18 press
+keycode  18 release
+keycode  29 release

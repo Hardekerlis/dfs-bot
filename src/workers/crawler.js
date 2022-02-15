@@ -54,7 +54,6 @@ let usedWorkers = [];
 
 const workerLoadBalancer = (index) => {
   const randNum = Math.floor(Math.random() * workersPool.length);
-
   const workerId = workersPool[randNum];
   workersPool.splice(randNum, 1);
   usedWorkers.push(workerId);
@@ -75,7 +74,7 @@ const start = async () => {
 
   const pancakeFactory = pancake.factory.methods;
   const amountOfPairs = process.env.LOCAL_DEV
-    ? 5
+    ? 2000
     : await pancakeFactory.allPairsLength().call();
 
   await client.connect();
@@ -124,9 +123,9 @@ const start = async () => {
     await client.set(i, parsedData);
     await client.incr('poolCount');
     logger.info(`Downloaded pair ${symbols}`);
-    workerLoadBalancer(i);
+    await workerLoadBalancer(i);
 
-    logger.info(`Finished with ${(i / (amountOfPairs - 1)) * 100}%`);
+    logger.info(`Finished with ${((i / amountOfPairs) * 100).toPrecision(4)}%`);
     await client.set('lastPoolIndex', i);
   }
 

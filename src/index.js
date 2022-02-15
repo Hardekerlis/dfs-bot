@@ -42,7 +42,7 @@ const start = async () => {
   if (process.env.LOCAL_DEV === 'true') {
     logger.warn('Application is in dev mode');
     logger.warn('Flushing redis');
-    await client.flushDb();
+    // await client.flushDb();
     logger.debug('Flushed redis');
   }
   logger.debug('Initializing worker factory');
@@ -76,6 +76,15 @@ const start = async () => {
   logger.info('Initializing worker');
   await crawlerWorker.init();
   await crawlerWorker.send('start');
+  logger.debug('Worker is running ...');
+
+  logger.info('Creating trade worker');
+  const tradeWorker = workerFactory.create('./src/workers/tradeWorker.js');
+  logger.debug('Created trade worker');
+
+  logger.info('Initializing worker');
+  await tradeWorker.init();
+  await tradeWorker.send('start');
   logger.debug('Worker is running ...');
 };
 

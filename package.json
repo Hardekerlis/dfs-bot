@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon ./src/index.js",
+    "dev": "sudo ./start.sh src/index.js",
     "chain": "ganache -f https://bsc-dataseed.binance.org -p 7545 --wallet.accountKeysPath ~/projekt/crypto/dfs-bot/wallets.json"
   },
   "author": "",

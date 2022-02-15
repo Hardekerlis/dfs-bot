@@ -1,0 +1,5 @@
+debug=true;
+debug2=true;
+idleTerminateAfter=35;
+intervalSleep=500;
+neverStop=true;

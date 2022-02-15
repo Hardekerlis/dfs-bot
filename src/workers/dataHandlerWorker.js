@@ -29,16 +29,16 @@ const handlePair = async () => {
 
     logger.debug('Handling data');
 
-    logger.debug('Fetching data');
+    logger.debug('Fetching data to handle from DB');
     const poolData = JSON.parse(await client.get(index));
-    let activePools = await client.get('activePools');
-
-    logger.debug('Parsing data');
-    if (activePools) {
-      activePools = JSON.parse(activePools);
-    } else {
-      activePools = [];
-    }
+    // let activePools = await client.get('activePools');
+    //
+    // logger.debug('Parsing data');
+    // if (activePools) {
+    //   activePools = JSON.parse(activePools);
+    // } else {
+    //   activePools = [];
+    // }
 
     const symbols = `${poolData.token0.symbol} / ${poolData.token1.symbol}`;
 
@@ -46,15 +46,9 @@ const handlePair = async () => {
       logger.info(`Insufficient liquidity for ${symbols}`);
     } else if (poolData.address.toLowerCase() === reservedPool.toLowerCase()) {
       logger.info('This pool is reserved for flashloans');
-      continue;
     } else {
       Interface.sendTo(dataWriterWorker, 'newData', poolData);
     }
-
-    // logger.debug('Checking how the data should be rerouted');
-    // if (activePools.length > 100) {
-    //   Interface.sendTo(dataWriterWorker, 'newData', poolData);
-    // }
 
     if (indexes.length === 0) working = false;
   }

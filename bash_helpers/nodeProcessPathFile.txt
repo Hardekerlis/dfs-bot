@@ -1,0 +1,1 @@
+/home/gustaf/projekt/crypto/dfs-bot/src/index.js
