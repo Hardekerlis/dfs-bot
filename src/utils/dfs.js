@@ -12,13 +12,13 @@ const parseData = async (rawPoolData) => {
   }
 
   for (pool of poolData) {
-    allTokens.add(pool.token0.symbol);
-    allTokens.add(pool.token1.symbol);
+    allTokens.add(pool.token0.address);
+    allTokens.add(pool.token1.address);
   }
 
   const routes = [];
   for (const pair of poolData) {
-    routes.push([pair.token0.symbol, pair.token1.symbol]);
+    routes.push([pair.token0.address, pair.token1.address]);
   }
 
   const adjecencyList = new Map();
@@ -47,6 +47,22 @@ const getOptimalAmount = (Ea, Eb) => {
 
   let A = (Math.sqrt(Ea * Eb * 0.3) - Ea) / r;
 
+  if (A < 0) {
+    return 0;
+  }
+
+  // TODO: Implement a fix for very small decimals
+  // console.log('Before', A);
+  // if (A.toString().includes('e')) {
+  //   const temp = A.toString().split('e');
+  //   console.log('Temp', temp);
+  //
+  //   const newNum = Math.pow(parseFloat(temp[0]), 10 * parseInt(temp[1]));
+  //   A = newNum;
+  // }
+  //
+  // console.log('After', A);
+
   return A;
 };
 
@@ -58,8 +74,8 @@ const getOptimalInput = (route, poolData, cb) => {
   const unorderedPairs = {};
 
   for (const pool of poolData) {
-    const token0Index = route.indexOf(pool.token0.symbol);
-    const token1Index = route.indexOf(pool.token1.symbol);
+    const token0Index = route.indexOf(pool.token0.address);
+    const token1Index = route.indexOf(pool.token1.address);
 
     const diff = token0Index - token1Index;
 
@@ -69,10 +85,10 @@ const getOptimalInput = (route, poolData, cb) => {
     }
 
     if (
-      (pool.token0.symbol === route[route.length - 1] &&
-        pool.token1.symbol === route[route.length - 2]) ||
-      (pool.token0.symbol === route[route.length - 2] &&
-        pool.token1.symbol === route[route.length - 1])
+      (pool.token0.address === route[route.length - 1] &&
+        pool.token1.address === route[route.length - 2]) ||
+      (pool.token0.address === route[route.length - 2] &&
+        pool.token1.address === route[route.length - 1])
     ) {
       unorderedPairs[route.length - 2] = pool;
     }
@@ -158,111 +174,7 @@ const getRoute = async (rawPoolData) => {
   const { adjecencyList, poolData } = await parseData(rawPoolData);
 
   // 2. Find routes
-
-  const routes = [];
-
   let stop = false;
-  // const dfs = async (inToken, startToken, cb, maxHops = 5, visited = []) => {
-  //   if (stop) return;
-  //
-  //   if (maxHops <= 0) {
-  //     return;
-  //   }
-  //   if (!visited.includes(startToken)) {
-  //     visited.push(inToken);
-  //   }
-  //
-  //   const destinations = shuffleArray(adjecencyList.get(inToken));
-  //   const hasStartToken = destinations.indexOf(startToken);
-  //
-  //   if (hasStartToken !== -1 && destinations.length !== 1)
-  //     if (!destinations[0])
-  //       // destinations.splice(hasStartToken, 1);
-  //
-  //       return logger.warn('Cant hopp');
-  //   // console.log(destinations);
-  //
-  //   for (const destination of destinations) {
-  //     // TODO: Add a check to limit array length before getOptimalInput
-  //     if (
-  //       visited.length >= 2 &&
-  //       adjecencyList.get(destination).includes(startToken)
-  //     ) {
-  //       if (hasStartToken === -1) {
-  //         dfs(destination, startToken, cb, maxHops - 1, visited);
-  //         continue;
-  //       }
-  //
-  //       const tempVisted = visited.slice();
-  //       tempVisted.push(destination);
-  //
-  //       // TODO: Fix this bad code. There is no garantee that destination can swap to startToken
-  //
-  //       // console.log(destination);
-  //       // if (destination !== startToken) {
-  //       //   console.log(adjecencyList.get(destination).includes(startToken));
-  //       //   if (adjecencyList.get(destination).includes(startToken)) {
-  //       //     console.log('PUSHING STARTTOKEN');
-  //       //     tempVisted.push(startToken);
-  //       //   } else {
-  //       //     dfs(destination, startToken, cb, maxHops - 1, visited);
-  //       //     continue;
-  //       //   }
-  //       // }
-  //
-  //       const indexOfBSCUSD = tempVisted.indexOf(
-  //         '0x55d398326f99059fF775485246999027B3197955',
-  //       );
-  //
-  //       if (indexOfBSCUSD !== -1) {
-  //         if (
-  //           tempVisited[indexOfBSCUSD - 1] === WBNB ||
-  //           tempVisited[indexOfBSCUSD + 1] === WBNB
-  //         ) {
-  //           continue;
-  //         }
-  //       }
-  //
-  //       getOptimalInput(tempVisted, poolData, (result) => {
-  //         if (!result.profitable || result.error) {
-  //           dfs(destination, startToken, cb, maxHops - 1, visited);
-  //           return;
-  //         }
-  //
-  //         routes.push({ route: result.route, optimalAmt: result.optimalAmt });
-  //         if (routes.length >= 3) stop = true;
-  //       });
-  //     } else dfs(destination, startToken, cb, maxHops - 1, visited);
-  //   }
-  // };
-
-  // const dfs = (start, visited = []) => {
-  //   if (stop) return;
-  //   console.log(start);
-  //
-  //   visited.push(start);
-  //
-  //   const destinations = adjecencyList.get(start);
-  //
-  //   for (const destination of destinations) {
-  //     if (destination === 'WBNB') {
-  //       const tempVisted = visited.slice();
-  //       routes.push(tempVisted);
-  //       console.log('DFS found WBNB in steps');
-  //
-  //       if (routes.length >= 4) stop = true;
-  //       return;
-  //     }
-  //
-  //     if (!visited.includes(destination)) {
-  //       dfs(destination, visited);
-  //     }
-  //   }
-  // };
-  //
-
-  // console.log(adjecencyList);
-
   const dfs = (inToken, goal, cb, visited = []) => {
     if (stop) return;
     const connectedNodes = shuffleArray(adjecencyList.get(inToken));
@@ -276,7 +188,7 @@ const getRoute = async (rawPoolData) => {
       if (node === goal) {
         if (stop) return;
 
-        visited.push('WBNB');
+        visited.push(WBNB);
         stop = true;
 
         const visitedCopy = visited.slice();
@@ -291,19 +203,14 @@ const getRoute = async (rawPoolData) => {
     }
   };
 
-  await dfs('WBNB', 'WBNB', (result) => {
-    console.log(result);
+  const dfsResult = await new Promise(async (resolve) => {
+    await dfs(WBNB, WBNB, (result) => {
+      resolve(result);
+    });
   });
 
-  // await dfs('WBNB', 'WBNB', (result) => {
-  //   // console.log(result);
-  //   routes.push(result);
-  // });
-
-  // console.log(routes);
-
   // 3. Return routes
-  return routes;
+  return dfsResult;
 };
 
 module.exports = getRoute;

@@ -31,22 +31,6 @@ const pancake = {
 //   router: new web3.eth.Contract(sushiAbis.router, sushiAddresses.router),
 // };
 
-const poolDataTemplate = {
-  address: '0x123jdhjahsdyasyd',
-  reserve0: '45678214',
-  reserve1: '897867867',
-  token0: {
-    decmial: '18',
-    address: '0x23dasdhadjkas',
-    symbol: 'MYTOK',
-  },
-  token1: {
-    decmial: '18',
-    address: '0x23dasdhadjkas',
-    symbol: 'MYTOK',
-  },
-};
-
 const ibep20Abi = require('../../abis/IBEP20.json');
 
 let workersPool;

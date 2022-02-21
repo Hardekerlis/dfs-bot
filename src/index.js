@@ -86,6 +86,36 @@ const start = async () => {
   await tradeWorker.init();
   await tradeWorker.send('start');
   logger.debug('Worker is running ...');
+
+  // logger.info('Creating activePairsUpdaterLB worker');
+  // const activePairsUpdaterLB = workerFactory.create(
+  //   './src/workers/activePairsUpdaterLB.js',
+  // );
+  // logger.debug('Created activePairsUpdaterLB worker');
+  //
+  // logger.info('Creating activePairsUpdater worker');
+  // const activePairsUpdater = [
+  //   workerFactory.create('./src/workers/activePairsUpdater.js'),
+  //   workerFactory.create('./src/workers/activePairsUpdater.js'),
+  // ];
+  // logger.debug('Created activePairsUpdater worker');
+  //
+  // logger.info('Initializing activePairsUpdater worker');
+  // await activePairsUpdater[0].init();
+  // await activePairsUpdater[0].send('start', activePairsUpdaterLB.id);
+  //
+  // await activePairsUpdater[1].init();
+  // await activePairsUpdater[1].send('start', activePairsUpdaterLB.id);
+  // logger.debug('activePairsUpdater Worker is running ...');
+  //
+  // // Has to be started after the updater
+  // logger.info('Initializing activePairsUpdaterLB worker');
+  // // await activePairsUpdaterLB.init();
+  // // logger.error('INITLIZEd');
+  //
+  // logger.error('Sending start to LB');
+  // await activePairsUpdaterLB.send('start');
+  // logger.debug('activePairsUpdaterLB Worker is running ...');
 };
 
 start();

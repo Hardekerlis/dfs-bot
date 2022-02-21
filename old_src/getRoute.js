@@ -237,7 +237,7 @@ const getOptimalInput = async (path, cb) => {
 };
 
 let ran = false;
-const validateRoute = async (route, cb) => {
+const validateRoute = async (route) => {
   const optimalAmtRes = await getOptimalInput(route);
   if (optimalAmtRes.error) return cb({ error: optimalAmt.error });
   if (optimalAmtRes.optimalAmt === 0) cb({ profitable: false });
@@ -290,7 +290,7 @@ const validateRoute = async (route, cb) => {
   //   [],
   // );
 
-  cb(result);
+  return result;
 };
 
 const getLoanPath = require('./getLoanPath.js');
